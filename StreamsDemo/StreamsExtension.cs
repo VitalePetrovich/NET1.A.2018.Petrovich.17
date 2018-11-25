@@ -26,7 +26,7 @@ namespace StreamsDemo
             InputValidation(sourcePath, destinationPath);
             
             using (FileStream source = File.OpenRead(sourcePath),
-                              destination = File.OpenWrite(destinationPath))
+                              destination = new FileStream(destinationPath, FileMode.Create))
             {
                 int count = 0;
                 while (source.Position < source.Length)
@@ -61,36 +61,94 @@ namespace StreamsDemo
 
             const int MEMORY_STREAM_CAPASITY = 1024;
 
-            using (StreamReader source = new StreamReader(File.OpenRead(sourcePath)))
-            using (MemoryStream mStream = new MemoryStream(MEMORY_STREAM_CAPASITY))
-            using (StreamWriter destination = new StreamWriter(File.OpenWrite(destinationPath)))
+            string text;
+            using (StreamReader source = new StreamReader(sourcePath, Encoding.GetEncoding(1251)))
             {
-                string text = source.ReadToEnd();
+                text = source.ReadToEnd();
+            }
+            
+            byte[] tempSource = Encoding.UTF8.GetBytes(text);
 
-                byte[] sourceTextBytes = Encoding.Default.GetBytes(text);
+            byte[] tempDest;
+            int count;
+            using (MemoryStream mStream = new MemoryStream(MEMORY_STREAM_CAPASITY))
+            {
+                //var bom = Encoding.UTF8.GetPreamble();
 
-                foreach (var b in sourceTextBytes)
+                //foreach (var b in bom)
+                //{
+                //    mStream.WriteByte(b);
+                //}
+                //mStream.Write(bom, 0, bom.Length);
+
+                foreach (var b in tempSource)
                 {
                     mStream.WriteByte(b);
                 }
+                //mStream.Write(tempSource, 0, tempSource.Length);
 
                 mStream.Seek(0, SeekOrigin.Begin);
 
-                byte[] destinationTextBytes = new byte[mStream.Length];
-                int countOfBytes = 0;
-                while (countOfBytes < mStream.Length)
+                tempDest = new byte[mStream.Length];
+                for (count = 0; count < tempDest.Length; count++)
                 {
-                    destinationTextBytes[countOfBytes++] = (byte)mStream.ReadByte();
+                    tempDest[count] = (byte)mStream.ReadByte();
                 }
-
-                char[] charArray = Encoding.Default.GetChars(destinationTextBytes);
-
-                destination.Write(charArray);
-
-                return countOfBytes;
+                //count = mStream.Read(tempDest = new byte[mStream.Length], 0, tempDest.Length);
             }
-        }
 
+            char[] chArray = Encoding.UTF8.GetChars(tempDest);
+
+            using (StreamWriter dest = new StreamWriter(destinationPath, false, Encoding.GetEncoding(1251)))
+            {
+                dest.Write(chArray);
+            }
+
+            return count;
+
+            //using (StreamReader source = new StreamReader(sourcePath))
+            //using (StreamWriter destination = new StreamWriter(destinationPath))
+            //{
+            //    string text = source.ReadToEnd();
+
+            //    Encoding utf8 = new UTF8Encoding(true);
+
+            //    byte[] sourceTextBytes = utf8.GetBytes(text);
+
+            //    int countOfBytes;
+            //    byte[] destinationTextBytes;
+
+            //    using (MemoryStream mStream = new MemoryStream(MEMORY_STREAM_CAPASITY))
+            //    {
+            //        foreach (var b in utf8.GetPreamble())
+            //        {
+            //            mStream.WriteByte(b);
+            //        }
+
+            //        foreach (var b in sourceTextBytes)
+            //        {
+            //            mStream.WriteByte(b);
+            //        }
+
+            //        mStream.Seek(0, SeekOrigin.Begin);
+
+            //        destinationTextBytes = new byte[mStream.Length];
+            //        for (int i = 0; i < mStream.Length; i++)
+            //        {
+            //            destinationTextBytes[i++] = (byte)mStream.ReadByte();
+            //        }
+
+            //        countOfBytes = (int)mStream.Length;
+            //    }
+
+            //    char[] charArray = utf8.GetChars(destinationTextBytes);
+
+            //    destination.Write(charArray);
+
+            //    return countOfBytes;
+            //}
+        }
+        
         #endregion
 
         #region TODO: Implement by block copy logic using FileStream buffer.
@@ -99,20 +157,30 @@ namespace StreamsDemo
         {
             InputValidation(sourcePath, destinationPath);
 
-            const int BLOCK_SIZE = 1024;
+            //const int BLOCK_SIZE = 1024;
             const int BUFFER_SIZE = 5000;
 
             using (FileStream source = File.OpenRead(sourcePath),
                               destination = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.Read, BUFFER_SIZE))
             {
-                byte[] block = new byte[BLOCK_SIZE];
+                byte[] temp = new byte[source.Length];
+                source.Read(temp, 0, temp.Length);
+                destination.Write(temp, 0, temp.Length);
 
-                while (source.Read(block, 0, block.Length) > 0)
-                {
-                    destination.Write(block, 0, block.Length);
-                }
-                destination.Flush();
-               
+                //int sizeOfCurrentBlock = (int)(source.Length - source.Position < BLOCK_SIZE
+                //                             ? source.Length - source.Position
+                //                             : BLOCK_SIZE);
+                //byte[] block = new byte[sizeOfCurrentBlock];
+                //while (source.Read(block, 0, sizeOfCurrentBlock) > 0)
+                //{
+                //    destination.Write(block, 0, sizeOfCurrentBlock);
+
+                //    sizeOfCurrentBlock = (int)(source.Length - source.Position < BLOCK_SIZE
+                //                                   ? source.Length - source.Position
+                //                                   : BLOCK_SIZE);
+                //    block = new byte[sizeOfCurrentBlock];
+                //}
+                
                 return (int)destination.Length;
             }
         }
@@ -128,13 +196,13 @@ namespace StreamsDemo
             const int MEMORY_STREAM_CAPASITY = 1024;
 
             InputValidation(sourcePath, destinationPath);
-            
-            using (StreamReader source = new StreamReader(File.OpenRead(sourcePath)))
+
+            using (StreamReader source = new StreamReader(sourcePath, Encoding.GetEncoding(1251)))
             using (MemoryStream mStream = new MemoryStream(MEMORY_STREAM_CAPASITY))
-            using (StreamWriter destination = new StreamWriter(File.OpenWrite(destinationPath)))
+            using (StreamWriter destination = new StreamWriter(destinationPath, false, Encoding.GetEncoding(1251)))
             {
                 string text = source.ReadToEnd();
-                byte[] sourceTextBytes = Encoding.Unicode.GetBytes(text);
+                byte[] sourceTextBytes = Encoding.UTF8.GetBytes(text);
 
                 mStream.Write(sourceTextBytes, 0, sourceTextBytes.Length);
                 mStream.Seek(0, SeekOrigin.Begin);
@@ -142,7 +210,7 @@ namespace StreamsDemo
                 byte[] destinationTextBytes = new byte[mStream.Length];
                 mStream.Read(destinationTextBytes, 0, (int)mStream.Length);
 
-                char[] charArray = Encoding.Unicode.GetChars(destinationTextBytes);
+                char[] charArray = Encoding.UTF8.GetChars(destinationTextBytes);
                 destination.Write(charArray);
 
                 return (int)mStream.Length;
@@ -156,26 +224,18 @@ namespace StreamsDemo
         public static int BufferedCopy(string sourcePath, string destinationPath)
         {
             InputValidation(sourcePath, destinationPath);
-
-            const int BLOCK_SIZE = 1024;
+            
             const int BUFFER_SIZE = 5000;
 
             using (FileStream source = File.OpenRead(sourcePath),
-                              destionation = File.OpenWrite(destinationPath))
+                              destionation = new FileStream(destinationPath, FileMode.Create))
             using (BufferedStream bufferedDestination = new BufferedStream(destionation, BUFFER_SIZE))
             {
-                byte[] block = new byte[BLOCK_SIZE];
-                int count = 0;
+                byte[] buffer = new byte[source.Length];
+                source.Read(buffer, 0, buffer.Length);
+                bufferedDestination.Write(buffer, 0, buffer.Length);
 
-                while (source.Read(block, 0, block.Length) > 0)
-                {
-                    bufferedDestination.Write(block, 0, block.Length);
-                    count += block.Length;
-                }
-
-                bufferedDestination.Flush();
-
-                return count;
+                return (int)bufferedDestination.Length;
             }
         }
 
@@ -187,16 +247,24 @@ namespace StreamsDemo
         {
             InputValidation(sourcePath, destinationPath);
 
-            using (StreamReader source = new StreamReader(File.OpenRead(sourcePath)))
-            using (StreamWriter destination = new StreamWriter(File.OpenWrite(destinationPath)))
+            using (StreamReader source = new StreamReader(sourcePath, Encoding.GetEncoding(1251)))
+            using (StreamWriter destination = new StreamWriter(destinationPath, false, Encoding.GetEncoding(1251)))
             {
-                string line;
                 int count = 0;
-
-                while (!string.IsNullOrEmpty(line = source.ReadLine()))
+                
+                while (true)
                 {
-                    destination.WriteLine(line);
+                    destination.Write(source.ReadLine());
                     count++;
+
+                    if (!source.EndOfStream)
+                    {
+                        destination.WriteLine();
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
 
                 return count;
